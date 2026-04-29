@@ -1,0 +1,37 @@
+import asyncio
+import sqlite3
+import logging
+import os
+from datetime import datetime
+from aiogram import Bot, Dispatcher, F, types
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.bot import DefaultBotProperties
+
+logging.basicConfig(level=logging.INFO)
+
+# --- КОНФИГ ---
+TOKEN = os.environ.get(TOKEN, 7519683641:AAFSl4pd6DENDM7JYb0l70Y08_SjX9GFeK8)
+DB_NAME = os.environ.get(DB_PATH, practicum.db)
+
+class Practicum(StatesGroup):
+    welcome = State()
+    task1 = State()
+    task2 = State()
+
+# --- БАЗА ДАННЫХ ---
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute('''CREATE TABLE IF NOT EXISTS users 
+                   (tg_id INTEGER PRIMARY KEY, username TEXT, step TEXT, last_act TIMESTAMP)''')
+    conn.commit()
+    conn.close()
+
+def upsert_user(tg_id, username, step):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute(
