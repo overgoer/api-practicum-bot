@@ -25,7 +25,10 @@ logger = logging.getLogger(__name__)
 TOKEN = os.environ.get("TOKEN", "7519683641:AAFSl4pd6DENDM7JYb0l70Y08_SjX9GFeK8")
 DB_NAME = os.environ.get("DB_PATH", "practicum.db")
 CHANNEL_EDDYTESTER = "https://t.me/eddytester"
-PRODUCT_LINK = "https://t.me/api_practikum_bot"  # заменить на реальную ссылку на API Practicum
+# Реальный username бота: api_practikum_bot
+PRODUCT_LINK = "https://t.me/api_practikum_bot"
+# Старая ссылка с start=buy — сохранить на будущее:
+# PRODUCT_LINK = "https://t.me/api_practikum_bot?start=buy"
 
 # ─── FSM СОСТОЯНИЯ ─────────────────────────────────────────────────────────
 class Practicum(StatesGroup):
@@ -147,6 +150,9 @@ TASK1_OBSIDIAN = (
     '  "server_time": "2026-09-11T12:00:00Z"\n'
     "}</code></blockquote>\n\n"
     "<b>Где баг?</b>\n\n"
+    "A. 200 OK — должен быть 400 Bad Request\n"
+    "B. success: true при сообщении об ошибке — противоречие\n"
+    "C. order_id: null — при ошибке должен быть всегда\n\n"
     "👇 Выбери вариант"
 )
 
@@ -156,9 +162,9 @@ async def start_task1(callback: types.CallbackQuery, state: FSMContext):
     upsert_user(callback.from_user.id, callback.from_user.username, "task1_view")
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="A) status: 200 OK — должен быть 400", callback_data="t1_wrong")
-    kb.button(text="B) success: true при ошибке валидации", callback_data="t1_correct")
-    kb.button(text="C) order_id: null — должен генерироваться", callback_data="t1_wrong2")
+    kb.button(text="A", callback_data="t1_wrong")
+    kb.button(text="B", callback_data="t1_correct")
+    kb.button(text="C", callback_data="t1_wrong2")
     kb.adjust(1)
 
     await callback.message.answer(TASK1_OBSIDIAN, reply_markup=kb.as_markup())
@@ -216,6 +222,10 @@ TASK2_OBSIDIAN = (
     '  "is_active": true\n'
     "}</code></blockquote>\n\n"
     "<b>Где критическая уязвимость?</b>\n\n"
+    "A. balance: 1500 — пользователь видит чужие финансы\n"
+    "B. password_hash в ответе — утечка хеша пароля\n"
+    'C. roles: ["user"] — должно быть больше ролей\n'
+    "\n"
     "👇 Выбери вариант"
 )
 
@@ -225,9 +235,9 @@ async def start_task2(callback: types.CallbackQuery, state: FSMContext):
     upsert_user(callback.from_user.id, callback.from_user.username, "task2_view")
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="A) balance: 1500 — не должно быть видно", callback_data="t2_wrong")
-    kb.button(text="B) password_hash в ответе API 🔥", callback_data="t2_correct")
-    kb.button(text="C) roles: [\"user\"] — мало ролей", callback_data="t2_wrong2")
+    kb.button(text="A", callback_data="t2_wrong")
+    kb.button(text="B", callback_data="t2_correct")
+    kb.button(text="C", callback_data="t2_wrong2")
     kb.adjust(1)
 
     await callback.message.answer(TASK2_OBSIDIAN, reply_markup=kb.as_markup())
@@ -241,7 +251,7 @@ async def check_task2(callback: types.CallbackQuery, state: FSMContext):
 
     if callback.data == "t2_correct":
         result = (
-            "✅ <b>В точку! 🔥</b>\n\n"
+            "✅ <b>В точку!</b>\n\n"
             "`password_hash` <b>никогда</b> не должен возвращаться в API response.\n\n"
             "<b>Риск:</b> Злоумышленник может использовать хеш для:\n"
             "• Брутфорс-атаки (подбор пароля)\n"
@@ -289,6 +299,10 @@ TASK3_OBSIDIAN = (
     '  "total_count": 45\n'
     "}</code></blockquote>\n\n"
     "<b>Что не так с этим ответом?</b>\n\n"
+    "A. total_count = 45 — не совпадает с количеством товаров\n"
+    "B. Вернулось 2 товара при limit=2 — бага нет\n"
+    "C. Оба фильтра не сработали (status=active + has_discount=true)\n"
+    "\n"
     "👇 Выбери вариант"
 )
 
@@ -298,9 +312,9 @@ async def start_task3(callback: types.CallbackQuery, state: FSMContext):
     upsert_user(callback.from_user.id, callback.from_user.username, "task3_view")
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="A) Фильтр status=active не сработал", callback_data="t3_wrong")
-    kb.button(text="B) Фильтр has_discount=true не сработал", callback_data="t3_wrong2")
-    kb.button(text="C) Оба фильтра не сработали", callback_data="t3_correct")
+    kb.button(text="A", callback_data="t3_wrong")
+    kb.button(text="B", callback_data="t3_wrong2")
+    kb.button(text="C", callback_data="t3_correct")
     kb.adjust(1)
 
     await callback.message.answer(TASK3_OBSIDIAN, reply_markup=kb.as_markup())
@@ -352,6 +366,10 @@ TASK4_OBSIDIAN = (
     '  "total_price": -499.00\n'
     "}</code></blockquote>\n\n"
     "<b>Что не так в этом ответе?</b>\n\n"
+    "A. quantity = -1 — отрицательное количество\n"
+    "B. total_price = -499.00 — отрицательная цена\n"
+    "C. И quantity, и total_price — оба бага\n"
+    "\n"
     "👇 Выбери вариант"
 )
 
@@ -361,9 +379,9 @@ async def start_task4(callback: types.CallbackQuery, state: FSMContext):
     upsert_user(callback.from_user.id, callback.from_user.username, "task4_view")
 
     kb = InlineKeyboardBuilder()
-    kb.button(text="A) quantity: -1 прошло валидацию", callback_data="t4_wrong")
-    kb.button(text="B) total_price: -499.00 — отрицательная цена", callback_data="t4_wrong2")
-    kb.button(text="C) Оба варианта 🔥", callback_data="t4_correct")
+    kb.button(text="A", callback_data="t4_wrong")
+    kb.button(text="B", callback_data="t4_wrong2")
+    kb.button(text="C", callback_data="t4_correct")
     kb.adjust(1)
 
     await callback.message.answer(TASK4_OBSIDIAN, reply_markup=kb.as_markup())
@@ -377,7 +395,7 @@ async def check_task4(callback: types.CallbackQuery, state: FSMContext):
 
     if callback.data == "t4_correct":
         result = (
-            "✅ <b>В точку! 🔥 Оба варианта — баги.</b>\n\n"
+            "✅ <b>В точку! Оба варианта — баги.</b>\n\n"
             "Сервер принял отрицательное количество и посчитал отрицательную цену.\n\n"
             "<b>Риск:</b> Злоумышленник может:\n"
             "• «Вернуть» товары и получить деньги\n"
@@ -411,7 +429,7 @@ async def after_tasks(callback: types.CallbackQuery, state: FSMContext):
     upsert_user(callback.from_user.id, callback.from_user.username, "after_tasks")
 
     msg = (
-        "<b>🔥 История из продакшена</b>\n\n"
+        "<b>История из продакшена</b>\n\n"
         "Один из первых рабочих багов:\n\n"
         "Я тестировал метод создания заказа, отправлял данные в Postman и проверял в БД. "
         "На тесте всё ок, веду задачу в релиз. И после раскатки на прод… "
@@ -541,7 +559,7 @@ async def show_offer(callback: types.CallbackQuery, state: FSMContext):
         "✅ 15+ реальных багов\n"
         "✅ Postman-коллекция\n"
         "✅ Видео-разборы и шаблоны\n\n"
-        "<b>🔥 Специальная цена: 5 000₽</b>\n\n"
+        "<b>Специальная цена: 5 000₽</b>\n\n"
         "<i>Это цена одной сессии код-ревью. Только здесь ты получишь 15+ багов "
         "и научишься видеть их самостоятельно.</i>\n\n"
         "👇 Выбирай:"
@@ -585,17 +603,12 @@ async def offer_decline(callback: types.CallbackQuery, state: FSMContext):
     upsert_user(tg_id, callback.from_user.username, "offer_declined")
 
     msg = (
-        "Понимаю. Не настаиваю.\n\n"
-        "Вот <b>3 статьи</b>, которые помогут прямо сейчас:\n\n"
-        "1️⃣ <b>3 простых приёма в тестировании API</b> — "
-        "то, что использую каждый день\n"
-        "2️⃣ <b>Как бороться с «серыми зонами» в задачах</b> — "
-        "чтобы не тратить часы на уточнения\n"
-        "3️⃣ <b>Shift-left: как тестировать быстрее</b> — "
-        "мой доклад с митапа\n\n"
-        "Если надумаешь — просто напиши /start. Воронка никуда не денется.\n\n"
-        "Удачи в тестировании! 🧪\n\n"
-        "<i>— Эд, @eddytester</i>"
+        'Вот <b>3 материала</b>, которые помогут прямо сейчас:\n\n'
+        '1️⃣ <a href="https://t.me/eddytester/362"><b>Почему API — самый полезный навык для тестировщика</b></a> — про бизнес-логику\n'
+        '2️⃣ <a href="https://t.me/eddytester/272"><b>400-ки, о которых молчат на собесах</b></a> — разбор редких HTTP-кодов\n'
+        '3️⃣ <a href="https://developer.mozilla.org/ru/docs/Web/HTTP/Status"><b>MDN: HTTP response status codes</b></a> — официальная документация Mozilla\n\n'
+        'Если надумаешь — просто напиши /start. Воронка никуда не денется.\n\n'
+        '<i>— Эд, @eddytester</i>'
     )
 
     kb = InlineKeyboardBuilder()
@@ -604,6 +617,8 @@ async def offer_decline(callback: types.CallbackQuery, state: FSMContext):
 
     await callback.message.answer(msg, reply_markup=kb.as_markup())
     await state.clear()
+    kb.button(text="🛒 Купить API Practicum", url=PRODUCT_LINK)
+    kb.button(text="💡 Всё-таки надумал — купить практикум", url=PRODUCT_LINK)
     await callback.answer()
 
 
