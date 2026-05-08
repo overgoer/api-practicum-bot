@@ -44,6 +44,10 @@ class Practicum(StatesGroup):
     msg4_inside = State()
     msg5_offer = State()
     msg6_soft_exit = State()
+    # ─── Task 5: Host Header / Load Balancer ───
+    task5_intro = State()
+    task5_practice = State()
+    task5_done = State()
 
 # ─── БАЗА ДАННЫХ ───────────────────────────────────────────────────────────
 def init_db():
@@ -409,12 +413,15 @@ async def check_task4(callback: types.CallbackQuery, state: FSMContext):
         result = "❌ total_price=-499 — это следствие, а не первопричина."
 
     kb = InlineKeyboardBuilder()
+    kb.button(text="🧪 Бонус: Host Header", callback_data="start_task5")
     kb.button(text="Узнать, что дальше ➡", callback_data="after_tasks")
     kb.adjust(1)
 
     await callback.message.answer(
         f"{result}\n\n<b>Ты прошёл мини-практикум! 👏</b>\n\n"
-        "4 задачи позади. Хочешь узнать, как ловить такие баги на реальных проектах?",
+        "4 задачи позади. Хочешь узнать, как ловить такие баги на реальных проектах?\n\n"
+        "А ещё есть <b>бонусный урок</b> про балансировщики и заголовок Host — "
+        "рекомендую перед тем, как уходить 👇",
         reply_markup=kb.as_markup()
     )
     await callback.answer()
@@ -657,6 +664,93 @@ async def cmd_help(message: types.Message):
 
 
 # ─── MAIN ───────────────────────────────────────────────────────────────────
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  БОНУС: TASK 5 — Host Header / Load Balancer
+# ═══════════════════════════════════════════════════════════════════════════
+
+LB_HOST = "85.193.81.51"
+LB_PORT = 8080
+
+TASK5_INTRO = (
+    "<b>🧪 Бонус: Балансировщики и заголовок Host</b>\n\n"
+    "На сервере крутится учебный балансировщик с тремя бэкендами.\n\n"
+    "Когда ты шлёшь запрос, он смотрит на заголовок <code>Host</code> "
+    "и направляет запрос на нужный сервер.\n\n"
+    "<b>Попробуй сам:</b>\n\n"
+    "Открой терминал и выполни три команды:\n\n"
+    "<code>curl -H 'Host: api.balance.local' http://{LB_HOST}:{LB_PORT}/</code>\n"
+    "→ ответит <b>API Backend</b>\n\n"
+    "<code>curl -H 'Host: app.balance.local' http://{LB_HOST}:{LB_PORT}/</code>\n"
+    "→ ответит <b>App Backend</b>\n\n"
+    "<code>curl -H 'Host: admin.balance.local' http://{LB_HOST}:{LB_PORT}/</code>\n"
+    "→ ответит <b>Admin Backend</b>\n\n"
+    "Один сервер, один порт — три разных ответа. "
+    "Всё зависит от заголовка <code>Host</code>."
+).format(LB_HOST=LB_HOST, LB_PORT=LB_PORT)
+
+TASK5_ADVANCED = (
+    "<b>🔄 А что если подменить?</b>\n\n"
+    "Попробуй теперь:\n\n"
+    "<code>curl -H 'Host: unknown.balance.local' http://{LB_HOST}:{LB_PORT}/</code>\n"
+    "→ получишь <b>404</b> (балансировщик не знает такого хоста)\n\n"
+    "<code>curl -H 'Host: api.balance.local' -H 'X-Forwarded-Host: evil.com' "
+    "http://{LB_HOST}:{LB_PORT}/</code>\n"
+    "→ в ответе увидишь поле <code>x_forwarded_host</code>\n\n"
+    "Если бэкенд доверяет <code>X-Forwarded-Host</code> — это уязвимость. "
+    "Именно так работают Host Header Injection атаки.\n\n"
+    "Подробнее: portswigger.net/web-security/host-header"
+).format(LB_HOST=LB_HOST, LB_PORT=LB_PORT)
+
+
+@dp.callback_query(F.data == "start_task5")
+async def start_task5(callback: types.CallbackQuery, state: FSMContext):
+    upsert_user(callback.from_user.id, callback.from_user.username, "task5_intro")
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Попробовал! Что дальше? ➡", callback_data="task5_advanced")
+    kb.adjust(1)
+
+    await callback.message.answer(TASK5_INTRO, reply_markup=kb.as_markup())
+    await state.set_state(Practicum.task5_intro)
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "task5_advanced")
+async def task5_advanced(callback: types.CallbackQuery, state: FSMContext):
+    upsert_user(callback.from_user.id, callback.from_user.username, "task5_advanced")
+
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Понятно! Дальше ➡", callback_data="task5_done")
+    kb.adjust(1)
+
+    await callback.message.answer(TASK5_ADVANCED, reply_markup=kb.as_markup())
+    await state.set_state(Practicum.task5_practice)
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "task5_done")
+async def task5_done(callback: types.CallbackQuery, state: FSMContext):
+    upsert_user(callback.from_user.id, callback.from_user.username, "task5_done")
+
+    msg = (
+        "<b>✅ Бонус-урок пройден!</b>\n\n"
+        "Теперь ты знаешь:\n"
+        "• Балансировщик направляет запросы по заголовку <code>Host</code>\n"
+        "• Один и тот же URL может вести на разные бэкенды\n"
+        "• <code>Host</code> можно подменить — и это основа Host Header Injection\n"
+        "• <code>X-Forwarded-Host</code> — ещё один вектор для атаки\n\n"
+        "Это пригодится не только пентестерам, но и в повседневном тестировании: "
+        "когда видишь 200 OK с неожиданным телом — возможно, "
+        "балансировщик отправил запрос не туда.\n\n"
+        "А теперь вернёмся к основной программе 👇"
+    )
+
+    await callback.message.answer(msg, reply_markup=kb_next("after_tasks"))
+    await state.set_state(Practicum.task5_done)
+    await callback.answer()
+
 
 async def main():
     init_db()
