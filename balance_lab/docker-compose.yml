@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  backend1:
+    build:
+      context: ./backends
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_NAME: api
+      BACKEND_PORT: 9001
+    expose:
+      - 9001
+    networks:
+      - balance-net
+
+  backend2:
+    build:
+      context: ./backends
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_NAME: app
+      BACKEND_PORT: 9002
+    expose:
+      - 9002
+    networks:
+      - balance-net
+
+  backend3:
+    build:
+      context: ./backends
+      dockerfile: Dockerfile
+    environment:
+      BACKEND_NAME: admin
+      BACKEND_PORT: 9003
+    expose:
+      - 9003
+    networks:
+      - balance-net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - 8080:8080
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend1
+      - backend2
+      - backend3
+    networks:
+      - balance-net
+
+networks:
+  balance-net:
+    driver: bridge
